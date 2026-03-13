@@ -11,16 +11,22 @@ exl run backup
 exl history backup
 ```
 
-## Installation
+## Development setup
 
 ```bash
-uv add exec-ledger
+git clone <repo-url>
+cd exec-ledger
+uv sync --dev
 ```
 
 Or with pip:
 
 ```bash
-pip install exec-ledger
+git clone <repo-url>
+cd exec-ledger
+python -m venv .venv
+.venv\Scripts\activate
+pip install -e .
 ```
 
 ## CLI usage
@@ -39,7 +45,7 @@ On Windows, use `cmd /c` for shell built-ins such as `echo`. On Unix, commands r
 ## Development
 
 ```bash
-uv sync
+uv sync --dev
 uv run pytest
 uv run ruff check src tests
 ```
