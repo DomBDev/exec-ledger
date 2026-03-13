@@ -26,3 +26,12 @@ def init_db(conn: sqlite3.Connection) -> None:
             stderr TEXT NOT NULL
         );
     """)
+
+
+def get_connection() -> sqlite3.Connection:
+    """Open connection, ensure schema exists. Caller must close."""
+    db_path = get_db_path()
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(db_path))
+    init_db(conn)
+    return conn
