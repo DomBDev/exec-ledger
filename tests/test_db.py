@@ -17,7 +17,15 @@ def test_runs_schema() -> None:
     init_db(conn)
     cur = conn.execute("PRAGMA table_info(runs)")
     cols = {row[1] for row in cur.fetchall()}
-    assert cols == {"id", "job_name", "started_at", "finished_at", "exit_code", "stdout", "stderr"}
+    assert cols == {
+        "id",
+        "job_name",
+        "started_at",
+        "finished_at",
+        "exit_code",
+        "stdout",
+        "stderr",
+    }
     conn.close()
 
 

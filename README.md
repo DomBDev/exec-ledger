@@ -1,28 +1,50 @@
 # ExecLedger
 
-ExecLedger is a versatile job runner I’m building for small automation tasks.
+Local job runner for small automation tasks. Stores job definitions and run history in SQLite.
 
-Right now this project is still early. The SQLite storage layer and repository functions are in place, but the CLI and actual job execution are still being built.
+## Quick example
 
-## Current state
+```bash
+exl init
+exl job add backup -c "cmd /c echo done"
+exl run backup
+exl history backup
+```
 
-So far, the project has:
+## Installation
 
-- SQLite database setup
-- job and run models
-- custom domain errors
-- repository functions for adding, listing, removing, and looking up jobs
-- run history storage
+```bash
+uv add exec-ledger
+```
 
-## Planned next
+Or with pip:
 
-- wire the CLI to the repository layer
-- execute jobs and capture real run output
-- improve error handling and command flow
+```bash
+pip install exec-ledger
+```
+
+## CLI usage
+
+```text
+exl init                     Create .execledger/ and the database
+exl job add <name> -c <cmd>  Add a job
+exl job list                 List jobs
+exl job remove <name>        Remove a job
+exl run <name>               Run a job
+exl history <name>           Show run history
+```
+
+On Windows, use `cmd /c` for shell built-ins such as `echo`. On Unix, commands run directly.
 
 ## Development
 
 ```bash
 uv sync
 uv run pytest
+uv run ruff check src tests
 ```
+
+## Roadmap
+
+* v0.0.1: CLI, foreground job execution, run history in SQLite
+* later: background execution, log files, configurable paths

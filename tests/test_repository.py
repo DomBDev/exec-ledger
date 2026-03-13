@@ -6,7 +6,14 @@ import pytest
 from execledger.db import init_db
 from execledger.errors import JobAlreadyExistsError, JobNotFoundError
 from execledger.models import Job, RunRecord
-from execledger.repository import add_job, add_run, get_history, get_job, list_jobs, remove_job
+from execledger.repository import (
+    add_job,
+    add_run,
+    get_history,
+    get_job,
+    list_jobs,
+    remove_job,
+)
 
 
 def test_add_job() -> None:
