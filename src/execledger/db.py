@@ -10,6 +10,7 @@ def get_db_path() -> Path:
 
 def init_db(conn: sqlite3.Connection) -> None:
     """Create jobs and runs tables if they do not exist."""
+    conn.execute("PRAGMA foreign_keys = ON")
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS jobs (
             name TEXT PRIMARY KEY,
