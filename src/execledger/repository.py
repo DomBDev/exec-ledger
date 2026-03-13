@@ -23,6 +23,18 @@ def list_jobs(conn: sqlite3.Connection) -> list[Job]:
     return [Job(name=row[0], command=row[1]) for row in cur.fetchall()]
 
 
+def get_job(conn: sqlite3.Connection, name: str) -> Job:
+    """Return a job by name. Raise JobNotFoundError if the job does not exist."""
+    cur = conn.execute(
+        "SELECT name, command FROM jobs WHERE name = ?",
+        (name,),
+    )
+    row = cur.fetchone()
+    if row is None:
+        raise JobNotFoundError(f"job '{name}' not found")
+    return Job(name=row[0], command=row[1])
+
+
 def remove_job(conn: sqlite3.Connection, name: str) -> None:
     """Delete a job. Raise JobNotFoundError if the job does not exist."""
     cur = conn.execute("DELETE FROM jobs WHERE name = ?", (name,))
