@@ -3,9 +3,9 @@ import sqlite3
 import pytest
 
 from execledger.db import init_db
-from execledger.errors import JobAlreadyExistsError
+from execledger.errors import JobAlreadyExistsError, JobNotFoundError
 from execledger.models import Job
-from execledger.repository import add_job, list_jobs
+from execledger.repository import add_job, list_jobs, remove_job
 
 
 def test_add_job() -> None:
@@ -31,6 +31,23 @@ def test_list_jobs_empty() -> None:
     conn = sqlite3.connect(":memory:")
     init_db(conn)
     assert list_jobs(conn) == []
+    conn.close()
+
+
+def test_remove_job() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    add_job(conn, "backup", "echo done")
+    remove_job(conn, "backup")
+    assert list_jobs(conn) == []
+    conn.close()
+
+
+def test_remove_job_not_found_raises() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    with pytest.raises(JobNotFoundError):
+        remove_job(conn, "nonexistent")
     conn.close()
 
 
