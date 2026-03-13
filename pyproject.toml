@@ -19,6 +19,11 @@ dev = ["pytest", "ruff"]
 [project.scripts]
 exl = "execledger.cli:app"
 
+[dependency-groups]
+dev = [
+    "pre-commit>=4.5.1",
+]
+
 [tool.ruff]
 target-version = "py312"
 line-length = 88
