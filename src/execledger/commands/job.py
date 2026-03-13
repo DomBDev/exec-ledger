@@ -17,7 +17,7 @@ def job_add(name: str, command: str = typer.Option(..., "--command", "-c")) -> N
         typer.echo(f"Added job '{name}'.")
     except JobAlreadyExistsError as e:
         typer.echo(str(e), err=True)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
     finally:
         conn.close()
 

@@ -7,9 +7,7 @@ from execledger.runner import run_job
 
 
 def test_run_job_captures_stdout() -> None:
-    exit_code, stdout, stderr = run_job(
-        [sys.executable, "-c", "print('done')"]
-    )
+    exit_code, stdout, stderr = run_job([sys.executable, "-c", "print('done')"])
     assert exit_code == 0
     assert stdout.strip() == "done"
     assert stderr == ""

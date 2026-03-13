@@ -7,7 +7,7 @@ class JobAlreadyExistsError(Exception):
 
 
 class ExecutionError(Exception):
-    """Run failed (subprocess error, nonzero exit)."""
+    """Run failed (subprocess or command parse error)."""
 
 
 class SchedulerError(Exception):

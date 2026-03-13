@@ -23,7 +23,7 @@ def run_job(command: str | list[str]) -> tuple[int, str, str]:
             args = shlex.split(cmd, posix=posix)
             if not posix:
                 args = [
-                    a[1:-1] if len(a) >= 2 and a[0] == a[-1] and a[0] in '"\'' else a
+                    a[1:-1] if len(a) >= 2 and a[0] == a[-1] and a[0] in "\"'" else a
                     for a in args
                 ]
     except ValueError as e:
