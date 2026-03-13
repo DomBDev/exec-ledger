@@ -1,5 +1,6 @@
 import shlex
 import subprocess
+import sys
 
 from execledger.errors import ExecutionError
 
@@ -10,7 +11,24 @@ def run_job(command: str | list[str]) -> tuple[int, str, str]:
     Accept a shell-style string parsed with shlex, or a list of args.
     Raise ExecutionError if the process cannot be started.
     """
-    args = command if isinstance(command, list) else shlex.split(command)
+    try:
+        if isinstance(command, list):
+            args = command
+        else:
+            posix = sys.platform != "win32"
+            cmd = command
+            if not posix:
+                # Normalize shell-escaped quotes (from PowerShell \" -> ")
+                cmd = cmd.replace('\\"', '"').replace("\\'", "'")
+            args = shlex.split(cmd, posix=posix)
+            if not posix:
+                args = [
+                    a[1:-1] if len(a) >= 2 and a[0] == a[-1] and a[0] in '"\'' else a
+                    for a in args
+                ]
+    except ValueError as e:
+        raise ExecutionError(f"Invalid command format: {e}") from e
+
     try:
         result = subprocess.run(
             args,
