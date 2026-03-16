@@ -9,6 +9,7 @@ from execledger.models import Job, RunRecord
 from execledger.repository import (
     add_job,
     add_run,
+    get_all_history,
     get_history,
     get_job,
     list_jobs,
@@ -142,6 +143,20 @@ def test_get_history_empty() -> None:
     conn = sqlite3.connect(":memory:")
     init_db(conn)
     assert get_history(conn, "nonexistent") == []
+    conn.close()
+
+
+def test_get_all_history() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    add_job(conn, "a", "echo a")
+    add_job(conn, "b", "echo b")
+    now = datetime.now(timezone.utc)
+    add_run(conn, RunRecord("a", now, now, 0, "", ""))
+    add_run(conn, RunRecord("b", now, now, 1, "", ""))
+    runs = get_all_history(conn)
+    assert len(runs) == 2
+    assert {r.job_name for r in runs} == {"a", "b"}
     conn.close()
 
 

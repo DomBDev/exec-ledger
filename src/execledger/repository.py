@@ -100,3 +100,31 @@ def get_history(conn: sqlite3.Connection, job_name: str) -> list[RunRecord]:
         )
         for row in cur.fetchall()
     ]
+
+
+def get_all_history(conn: sqlite3.Connection) -> list[RunRecord]:
+    """Return all runs, newest first."""
+    cur = conn.execute(
+        """
+        SELECT
+            job_name,
+            started_at,
+            finished_at,
+            exit_code,
+            stdout,
+            stderr
+        FROM runs
+        ORDER BY id DESC
+        """
+    )
+    return [
+        RunRecord(
+            job_name=row[0],
+            started_at=datetime.fromisoformat(row[1]),
+            finished_at=datetime.fromisoformat(row[2]),
+            exit_code=row[3],
+            stdout=row[4],
+            stderr=row[5],
+        )
+        for row in cur.fetchall()
+    ]

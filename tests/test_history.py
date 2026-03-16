@@ -60,3 +60,26 @@ def test_history_job_not_found(tmp_path, monkeypatch, capsys) -> None:
 
     assert exc_info.value.exit_code == 1
     assert "not found" in err.lower()
+
+
+def test_history_all_runs(tmp_path, monkeypatch, capsys) -> None:
+    monkeypatch.chdir(tmp_path)
+    init_cmd()
+
+    conn = get_connection()
+    add_job(conn, "job1", "echo 1")
+    add_job(conn, "job2", "echo 2")
+    now = datetime(2026, 3, 13, 12, 0, 0, tzinfo=timezone.utc)
+    add_run(conn, RunRecord("job1", now, now, 0, "", ""))
+    add_run(conn, RunRecord("job2", now, now, 1, "", ""))
+    conn.close()
+
+    history(None)
+
+    out, err = capsys.readouterr()
+
+    assert err == ""
+    assert "job1" in out
+    assert "job2" in out
+    assert "exit 0" in out
+    assert "exit 1" in out

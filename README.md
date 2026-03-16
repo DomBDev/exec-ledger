@@ -37,7 +37,7 @@ exl job add <name> -c <cmd>  Add a job
 exl job list                 List jobs
 exl job remove <name>        Remove a job
 exl run <name>               Run a job
-exl history <name>           Show run history
+exl history [name]           Show run history
 ```
 
 On Windows, use `cmd /c` for shell built-ins such as `echo`. On Unix, commands run directly.

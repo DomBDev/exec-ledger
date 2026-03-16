@@ -52,7 +52,7 @@ wheels = [
 
 [[package]]
 name = "exec-ledger"
-version = "0.0.1a0"
+version = "0.0.2a0"
 source = { editable = "." }
 dependencies = [
     { name = "typer" },
