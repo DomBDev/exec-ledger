@@ -7,7 +7,7 @@ packages = ["src/execledger"]
 
 [project]
 name = "exec-ledger"
-version = "0.0.2a0"
+version = "0.0.3a0"
 description = "Local job runner for small automation tasks."
 readme = "README.md"
 requires-python = ">=3.12"
