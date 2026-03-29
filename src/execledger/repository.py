@@ -242,6 +242,7 @@ def start_pipeline_run(
         (pipeline_name, started_at.isoformat(), "running"),
     )
     conn.commit()
+    assert cur.lastrowid is not None
     return cur.lastrowid
 
 
@@ -254,6 +255,7 @@ def start_step_run(
         (run_id, step_name, "active", started_at.isoformat()),
     )
     conn.commit()
+    assert cur.lastrowid is not None
     return cur.lastrowid
 
 
