@@ -16,16 +16,23 @@ from execledger.repository import (
     add_pipeline,
     add_run,
     add_step,
+    complete_step_run,
+    fail_step_run,
+    finish_pipeline_run,
     get_all_history,
     get_history,
     get_job,
     get_pipeline,
+    get_pipeline_run_status,
+    get_run_history,
     list_jobs,
     list_pipelines,
     list_steps,
     remove_job,
     remove_pipeline,
     remove_step,
+    start_pipeline_run,
+    start_step_run,
 )
 
 
@@ -317,4 +324,92 @@ def test_remove_step_not_found_raises() -> None:
     init_db(conn)
     with pytest.raises(PipelineNotFoundError):
         remove_step(conn, "deploy", "nonexistent")
+    conn.close()
+
+
+def test_start_pipeline_run() -> None:
+    """start_pipeline_run creates a run with status 'running' and returns its ID."""
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "deploy", now)
+    run_id = start_pipeline_run(conn, "deploy", now)
+    assert isinstance(run_id, int)
+    run, _ = get_pipeline_run_status(conn, run_id)
+    assert run.status == "running"
+    assert run.pipeline_name == "deploy"
+    conn.close()
+
+
+def test_step_run_lifecycle() -> None:
+    """A step goes from active to completed with output stored."""
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "deploy", now)
+    run_id = start_pipeline_run(conn, "deploy", now)
+    sr_id = start_step_run(conn, run_id, "build", now)
+    complete_step_run(conn, sr_id, now, 0, "built ok", "")
+    _, step_runs = get_pipeline_run_status(conn, run_id)
+    assert len(step_runs) == 1
+    assert step_runs[0].status == "completed"
+    assert step_runs[0].exit_code == 0
+    assert step_runs[0].stdout == "built ok"
+    conn.close()
+
+
+def test_step_run_failure() -> None:
+    """A failed step stores exit code and stderr."""
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "deploy", now)
+    run_id = start_pipeline_run(conn, "deploy", now)
+    sr_id = start_step_run(conn, run_id, "test", now)
+    fail_step_run(conn, sr_id, now, 1, "", "tests failed")
+    _, step_runs = get_pipeline_run_status(conn, run_id)
+    assert step_runs[0].status == "failed"
+    assert step_runs[0].exit_code == 1
+    assert step_runs[0].stderr == "tests failed"
+    conn.close()
+
+
+def test_finish_pipeline_run() -> None:
+    """finish_pipeline_run sets the final status and timestamp."""
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "deploy", now)
+    run_id = start_pipeline_run(conn, "deploy", now)
+    finish_pipeline_run(conn, run_id, now, "completed")
+    run, _ = get_pipeline_run_status(conn, run_id)
+    assert run.status == "completed"
+    assert run.finished_at is not None
+    conn.close()
+
+
+def test_get_run_history() -> None:
+    """get_run_history returns runs newest first."""
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "deploy", now)
+    id1 = start_pipeline_run(conn, "deploy", now)
+    finish_pipeline_run(conn, id1, now, "completed")
+    id2 = start_pipeline_run(conn, "deploy", now)
+    finish_pipeline_run(conn, id2, now, "failed")
+    history = get_run_history(conn, "deploy")
+    assert len(history) == 2
+    assert history[0].id == id2
+    assert history[0].status == "failed"
+    assert history[1].id == id1
+    assert history[1].status == "completed"
+    conn.close()
+
+
+def test_get_pipeline_run_status_not_found() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    with pytest.raises(PipelineNotFoundError):
+        get_pipeline_run_status(conn, 999)
     conn.close()
