@@ -4,16 +4,28 @@ from datetime import datetime, timezone
 import pytest
 
 from execledger.db import init_db
-from execledger.errors import JobAlreadyExistsError, JobNotFoundError
+from execledger.errors import (
+    JobAlreadyExistsError,
+    JobNotFoundError,
+    PipelineAlreadyExistsError,
+    PipelineNotFoundError,
+)
 from execledger.models import Job, RunRecord
 from execledger.repository import (
     add_job,
+    add_pipeline,
     add_run,
+    add_step,
     get_all_history,
     get_history,
     get_job,
+    get_pipeline,
     list_jobs,
+    list_pipelines,
+    list_steps,
     remove_job,
+    remove_pipeline,
+    remove_step,
 )
 
 
@@ -166,4 +178,143 @@ def test_add_job_duplicate_raises() -> None:
     add_job(conn, "backup", "echo done")
     with pytest.raises(JobAlreadyExistsError):
         add_job(conn, "backup", "echo other")
+    conn.close()
+
+
+def test_add_pipeline() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "deploy", now)
+    p = get_pipeline(conn, "deploy")
+    assert p.name == "deploy"
+    conn.close()
+
+
+def test_add_pipeline_duplicate_raises() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "deploy", now)
+    with pytest.raises(PipelineAlreadyExistsError):
+        add_pipeline(conn, "deploy", now)
+    conn.close()
+
+
+def test_get_pipeline_not_found_raises() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    with pytest.raises(PipelineNotFoundError):
+        get_pipeline(conn, "nonexistent")
+    conn.close()
+
+
+def test_list_pipelines() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "a", now)
+    add_pipeline(conn, "b", now)
+    pipes = list_pipelines(conn)
+    assert len(pipes) == 2
+    assert pipes[0].name == "a"
+    assert pipes[1].name == "b"
+    conn.close()
+
+
+def test_list_pipelines_empty() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    assert list_pipelines(conn) == []
+    conn.close()
+
+
+def test_remove_pipeline() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "deploy", now)
+    remove_pipeline(conn, "deploy")
+    assert list_pipelines(conn) == []
+    conn.close()
+
+
+def test_remove_pipeline_not_found_raises() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    with pytest.raises(PipelineNotFoundError):
+        remove_pipeline(conn, "nonexistent")
+    conn.close()
+
+
+def test_remove_pipeline_deletes_steps() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "deploy", now)
+    add_step(conn, "deploy", "build", 0, command="make build")
+    add_step(conn, "deploy", "test", 1, command="make test")
+    remove_pipeline(conn, "deploy")
+    assert list_steps(conn, "deploy") == []
+    conn.close()
+
+
+def test_add_step() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "deploy", now)
+    add_step(conn, "deploy", "build", 0, command="make build")
+    steps = list_steps(conn, "deploy")
+    assert len(steps) == 1
+    assert steps[0].name == "build"
+    assert steps[0].command == "make build"
+    assert steps[0].position == 0
+    conn.close()
+
+
+def test_add_step_pipeline_not_found_raises() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    with pytest.raises(PipelineNotFoundError):
+        add_step(conn, "nonexistent", "build", 0, command="make build")
+    conn.close()
+
+
+def test_list_steps_ordered_by_position() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "deploy", now)
+    add_step(conn, "deploy", "test", 1, command="make test")
+    add_step(conn, "deploy", "build", 0, command="make build")
+    steps = list_steps(conn, "deploy")
+    assert steps[0].name == "build"
+    assert steps[1].name == "test"
+    conn.close()
+
+
+def test_list_steps_empty() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    assert list_steps(conn, "nonexistent") == []
+    conn.close()
+
+
+def test_remove_step() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "deploy", now)
+    add_step(conn, "deploy", "build", 0, command="make build")
+    remove_step(conn, "deploy", "build")
+    assert list_steps(conn, "deploy") == []
+    conn.close()
+
+
+def test_remove_step_not_found_raises() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    with pytest.raises(PipelineNotFoundError):
+        remove_step(conn, "deploy", "nonexistent")
     conn.close()

@@ -12,3 +12,11 @@ class ExecutionError(Exception):
 
 class SchedulerError(Exception):
     """Schedule related failures."""
+
+
+class PipelineNotFoundError(Exception):
+    """Pipeline name does not exist."""
+
+
+class PipelineAlreadyExistsError(Exception):
+    """Duplicate pipeline name on add."""
