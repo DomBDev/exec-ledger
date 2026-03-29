@@ -11,10 +11,18 @@ exl run backup
 exl history backup
 ```
 
+## Installation
+
+From another project with `uv`:
+
+```bash
+uv add "exec-ledger @ git+https://github.com/DomBDev/exec-ledger.git"
+```
+
 ## Development setup
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/DomBDev/exec-ledger.git
 cd exec-ledger
 uv sync --dev
 ```
@@ -22,7 +30,7 @@ uv sync --dev
 Or with pip:
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/DomBDev/exec-ledger.git
 cd exec-ledger
 python -m venv .venv
 .venv\Scripts\activate
@@ -52,5 +60,5 @@ uv run ruff check src tests
 
 ## Roadmap
 
-* v0.0.1: CLI, foreground job execution, run history in SQLite
+* v0.0.2: CLI, foreground job execution, run history in SQLite
 * later: background execution, log files, configurable paths
