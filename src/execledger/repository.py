@@ -6,6 +6,7 @@ from execledger.errors import (
     JobNotFoundError,
     PipelineAlreadyExistsError,
     PipelineNotFoundError,
+    StepNotFoundError,
 )
 from execledger.models import Job, Pipeline, PipelineRun, RunRecord, Step, StepRun
 
@@ -220,13 +221,14 @@ def list_steps(conn: sqlite3.Connection, pipeline_name: str) -> list[Step]:
 
 
 def remove_step(conn: sqlite3.Connection, pipeline_name: str, step_name: str) -> None:
-    """Remove a step from a pipeline."""
+    """Remove a step. Raise PipelineNotFoundError or StepNotFoundError."""
+    get_pipeline(conn, pipeline_name)
     cur = conn.execute(
         "DELETE FROM steps WHERE pipeline_name = ? AND name = ?",
         (pipeline_name, step_name),
     )
     if cur.rowcount == 0:
-        raise PipelineNotFoundError(
+        raise StepNotFoundError(
             f"step '{step_name}' not found in pipeline '{pipeline_name}'"
         )
     conn.commit()
