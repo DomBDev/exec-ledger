@@ -20,3 +20,7 @@ class PipelineNotFoundError(Exception):
 
 class PipelineAlreadyExistsError(Exception):
     """Duplicate pipeline name on add."""
+
+
+class StepConfigurationError(Exception):
+    """Step must have exactly one of command or func_ref."""
