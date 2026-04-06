@@ -22,6 +22,10 @@ class StepNotFoundError(Exception):
     """Step name does not exist in the pipeline."""
 
 
+class StepAlreadyExistsError(Exception):
+    """Step name already exists in the pipeline."""
+
+
 class PipelineAlreadyExistsError(Exception):
     """Duplicate pipeline name on add."""
 
