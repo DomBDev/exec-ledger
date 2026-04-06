@@ -8,7 +8,7 @@ from execledger.commands.pipeline import (
     pipeline_remove,
     pipeline_status,
 )
-from execledger.commands.run import run
+from execledger.commands.run import resume, run
 from execledger.commands.step import step_app
 
 app = typer.Typer()
@@ -27,4 +27,5 @@ app.command("remove")(pipeline_remove)
 app.command("status")(pipeline_status)
 app.add_typer(step_app, name="step")
 app.command("run")(run)
+app.command("resume")(resume)
 app.command("history")(history)
