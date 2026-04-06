@@ -14,8 +14,8 @@ def test_init_creates_dir_and_db(tmp_path, monkeypatch) -> None:
     assert db_path.exists()
 
     with sqlite3.connect(str(db_path)) as conn:
-        conn.execute("SELECT 1 FROM jobs LIMIT 1")
-        conn.execute("SELECT 1 FROM runs LIMIT 1")
+        conn.execute("SELECT 1 FROM pipelines LIMIT 1")
+        conn.execute("SELECT 1 FROM pipeline_runs LIMIT 1")
 
 
 def test_init_idempotent(tmp_path, monkeypatch) -> None:
@@ -28,4 +28,4 @@ def test_init_idempotent(tmp_path, monkeypatch) -> None:
     assert db_path.exists()
 
     with sqlite3.connect(str(db_path)) as conn:
-        conn.execute("SELECT 1 FROM jobs LIMIT 1")
+        conn.execute("SELECT 1 FROM pipelines LIMIT 1")
