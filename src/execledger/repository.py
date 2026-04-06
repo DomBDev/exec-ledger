@@ -4,8 +4,10 @@ from datetime import datetime
 from execledger.errors import (
     JobAlreadyExistsError,
     JobNotFoundError,
+    NoResumableRunError,
     PipelineAlreadyExistsError,
     PipelineNotFoundError,
+    StepNotFoundError,
 )
 from execledger.models import Job, Pipeline, PipelineRun, RunRecord, Step, StepRun
 
@@ -220,13 +222,14 @@ def list_steps(conn: sqlite3.Connection, pipeline_name: str) -> list[Step]:
 
 
 def remove_step(conn: sqlite3.Connection, pipeline_name: str, step_name: str) -> None:
-    """Remove a step from a pipeline."""
+    """Remove a step. Raise PipelineNotFoundError or StepNotFoundError."""
+    get_pipeline(conn, pipeline_name)
     cur = conn.execute(
         "DELETE FROM steps WHERE pipeline_name = ? AND name = ?",
         (pipeline_name, step_name),
     )
     if cur.rowcount == 0:
-        raise PipelineNotFoundError(
+        raise StepNotFoundError(
             f"step '{step_name}' not found in pipeline '{pipeline_name}'"
         )
     conn.commit()
@@ -306,6 +309,47 @@ def finish_pipeline_run(
     conn.execute(
         "UPDATE pipeline_runs SET finished_at = ?, status = ? WHERE id = ?",
         (finished_at.isoformat(), status, run_id),
+    )
+    conn.commit()
+
+
+def get_latest_resumable_run_id(conn: sqlite3.Connection, pipeline_name: str) -> int:
+    """Latest pipeline run that is failed or still running. For resume."""
+    row = conn.execute(
+        """
+        SELECT id FROM pipeline_runs
+        WHERE pipeline_name = ? AND status IN ('failed', 'running')
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (pipeline_name,),
+    ).fetchone()
+    if row is None:
+        raise NoResumableRunError(f"no resumable run for pipeline '{pipeline_name}'")
+    return int(row[0])
+
+
+def reopen_pipeline_run(conn: sqlite3.Connection, run_id: int) -> None:
+    """Clear finished_at and set status to running before continuing a run."""
+    conn.execute(
+        "UPDATE pipeline_runs SET status = ?, finished_at = NULL WHERE id = ?",
+        ("running", run_id),
+    )
+    conn.commit()
+
+
+def reopen_step_run(
+    conn: sqlite3.Connection, step_run_id: int, started_at: datetime
+) -> None:
+    """Reset a step row to active so the step can be executed again."""
+    conn.execute(
+        """
+        UPDATE step_runs
+        SET status = ?, started_at = ?, finished_at = NULL,
+            exit_code = NULL, stdout = '', stderr = ''
+        WHERE id = ?
+        """,
+        ("active", started_at.isoformat(), step_run_id),
     )
     conn.commit()
 

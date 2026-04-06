@@ -18,5 +18,17 @@ class PipelineNotFoundError(Exception):
     """Pipeline name does not exist."""
 
 
+class StepNotFoundError(Exception):
+    """Step name does not exist in the pipeline."""
+
+
 class PipelineAlreadyExistsError(Exception):
     """Duplicate pipeline name on add."""
+
+
+class StepConfigurationError(Exception):
+    """Step must have exactly one of command or func_ref."""
+
+
+class NoResumableRunError(Exception):
+    """No failed or interrupted run to resume for this pipeline."""

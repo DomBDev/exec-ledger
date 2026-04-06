@@ -9,6 +9,7 @@ from execledger.errors import (
     JobNotFoundError,
     PipelineAlreadyExistsError,
     PipelineNotFoundError,
+    StepNotFoundError,
 )
 from execledger.models import Job, RunRecord
 from execledger.repository import (
@@ -322,8 +323,18 @@ def test_remove_step() -> None:
 def test_remove_step_not_found_raises() -> None:
     conn = sqlite3.connect(":memory:")
     init_db(conn)
-    with pytest.raises(PipelineNotFoundError):
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "deploy", now)
+    with pytest.raises(StepNotFoundError):
         remove_step(conn, "deploy", "nonexistent")
+    conn.close()
+
+
+def test_remove_step_pipeline_not_found_raises() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    with pytest.raises(PipelineNotFoundError):
+        remove_step(conn, "deploy", "build")
     conn.close()
 
 
