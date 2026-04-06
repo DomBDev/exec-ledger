@@ -62,7 +62,13 @@ def init_db(conn: sqlite3.Connection) -> None:
 
 
 def get_connection() -> sqlite3.Connection:
-    """Open connection, ensure schema exists. Caller must close."""
+    """Open connection, ensure schema exists. Caller must close.
+
+    init_db runs on every open: cheap (IF NOT EXISTS), so new installs and old
+    DB files both get any new tables without a separate migration step. Tradeoff:
+    no versioned migrations here. schema changes that alter existing columns still
+    need a deliberate upgrade path outside this helper.
+    """
     db_path = get_db_path()
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path))

@@ -9,6 +9,7 @@ from execledger.errors import (
     JobNotFoundError,
     PipelineAlreadyExistsError,
     PipelineNotFoundError,
+    StepAlreadyExistsError,
     StepNotFoundError,
 )
 from execledger.models import Job, RunRecord
@@ -286,6 +287,17 @@ def test_add_step_pipeline_not_found_raises() -> None:
     init_db(conn)
     with pytest.raises(PipelineNotFoundError):
         add_step(conn, "nonexistent", "build", 0, command="make build")
+    conn.close()
+
+
+def test_add_step_duplicate_raises() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "deploy", now)
+    add_step(conn, "deploy", "build", 0, command="make build")
+    with pytest.raises(StepAlreadyExistsError):
+        add_step(conn, "deploy", "build", 0, command="make test")
     conn.close()
 
 

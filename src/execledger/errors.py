@@ -10,10 +10,6 @@ class ExecutionError(Exception):
     """Run failed (subprocess or command parse error)."""
 
 
-class SchedulerError(Exception):
-    """Schedule related failures."""
-
-
 class PipelineNotFoundError(Exception):
     """Pipeline name does not exist."""
 

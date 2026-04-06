@@ -7,6 +7,7 @@ from execledger.errors import (
     NoResumableRunError,
     PipelineAlreadyExistsError,
     PipelineNotFoundError,
+    StepAlreadyExistsError,
     StepNotFoundError,
 )
 from execledger.models import Job, Pipeline, PipelineRun, RunRecord, Step, StepRun
@@ -188,14 +189,20 @@ def add_step(
 ) -> None:
     """Add a step to a pipeline. Pipeline must exist."""
     get_pipeline(conn, pipeline_name)
-    conn.execute(
-        """
-        INSERT INTO steps (pipeline_name, name, command, func_ref, position)
-        VALUES (?, ?, ?, ?, ?)
-        """,
-        (pipeline_name, name, command, func_ref, position),
-    )
-    conn.commit()
+    try:
+        conn.execute(
+            """
+            INSERT INTO steps (pipeline_name, name, command, func_ref, position)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (pipeline_name, name, command, func_ref, position),
+        )
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.rollback()
+        raise StepAlreadyExistsError(
+            f"step '{name}' already exists in pipeline '{pipeline_name}'"
+        ) from None
 
 
 def list_steps(conn: sqlite3.Connection, pipeline_name: str) -> list[Step]:
