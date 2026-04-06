@@ -28,3 +28,7 @@ class PipelineAlreadyExistsError(Exception):
 
 class StepConfigurationError(Exception):
     """Step must have exactly one of command or func_ref."""
+
+
+class NoResumableRunError(Exception):
+    """No failed or interrupted run to resume for this pipeline."""

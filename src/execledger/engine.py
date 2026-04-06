@@ -1,12 +1,21 @@
 import sqlite3
 from datetime import datetime, timezone
 
-from execledger.errors import ExecutionError, StepConfigurationError
+from execledger.errors import (
+    ExecutionError,
+    NoResumableRunError,
+    StepConfigurationError,
+)
 from execledger.repository import (
     complete_step_run,
     fail_step_run,
     finish_pipeline_run,
+    get_latest_resumable_run_id,
+    get_pipeline,
+    get_pipeline_run_status,
     list_steps,
+    reopen_pipeline_run,
+    reopen_step_run,
     start_pipeline_run,
     start_step_run,
 )
@@ -58,6 +67,59 @@ def run_pipeline(conn: sqlite3.Connection, pipeline_name: str) -> int:
     for step_name, kind, payload in planned:
         t0 = datetime.now(timezone.utc)
         step_run_id = start_step_run(conn, run_id, step_name, t0)
+        exit_code, stdout, stderr = _execute_step(kind, payload)
+        t1 = datetime.now(timezone.utc)
+        if exit_code == 0:
+            complete_step_run(conn, step_run_id, t1, exit_code, stdout, stderr)
+        else:
+            fail_step_run(conn, step_run_id, t1, exit_code, stdout, stderr)
+            finish_pipeline_run(conn, run_id, t1, "failed")
+            return run_id
+
+    finish_pipeline_run(conn, run_id, datetime.now(timezone.utc), "completed")
+    return run_id
+
+
+def restart_pipeline(conn: sqlite3.Connection, pipeline_name: str) -> int:
+    """Start a new run from step 1. Prior runs stay in history."""
+    return run_pipeline(conn, pipeline_name)
+
+
+def resume_pipeline(conn: sqlite3.Connection, pipeline_name: str) -> int:
+    """Continue the latest failed or interrupted run from the first failed/active step."""
+    get_pipeline(conn, pipeline_name)
+    steps = list_steps(conn, pipeline_name)
+    for step in steps:
+        _step_kind(step.command, step.func_ref)
+
+    run_id = get_latest_resumable_run_id(conn, pipeline_name)
+    _, existing = get_pipeline_run_status(conn, run_id)
+    by_name = {sr.step_name: sr for sr in existing}
+
+    resume_idx: int | None = None
+    for i, step in enumerate(steps):
+        sr = by_name.get(step.name)
+        if sr and sr.status in ("failed", "active"):
+            resume_idx = i
+            break
+
+    if resume_idx is None:
+        raise NoResumableRunError(f"no failed or active step to resume in run {run_id}")
+
+    reopen_pipeline_run(conn, run_id)
+
+    for i in range(resume_idx, len(steps)):
+        step = steps[i]
+        kind, payload = _step_kind(step.command, step.func_ref)
+        t0 = datetime.now(timezone.utc)
+        if i == resume_idx:
+            sr = by_name[step.name]
+            step_run_id = sr.id
+            if step_run_id is None:
+                raise NoResumableRunError("step run has no id")
+            reopen_step_run(conn, step_run_id, t0)
+        else:
+            step_run_id = start_step_run(conn, run_id, step.name, t0)
         exit_code, stdout, stderr = _execute_step(kind, payload)
         t1 = datetime.now(timezone.utc)
         if exit_code == 0:
