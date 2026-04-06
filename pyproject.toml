@@ -13,6 +13,9 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = ["typer"]
 
+[project.urls]
+Repository = "https://github.com/DomBDev/exec-ledger"
+
 [project.optional-dependencies]
 dev = ["pytest", "ruff"]
 
