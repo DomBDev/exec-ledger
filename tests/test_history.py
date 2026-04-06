@@ -1,3 +1,4 @@
+import sys
 from datetime import datetime, timezone
 
 import pytest
@@ -6,50 +7,45 @@ from typer import Exit
 from execledger.commands.history import history
 from execledger.commands.init import init_cmd
 from execledger.db import get_connection
-from execledger.models import RunRecord
-from execledger.repository import add_job, add_run
+from execledger.engine import run_pipeline
+from execledger.repository import add_pipeline, add_step
 
 
 def test_history_shows_runs(tmp_path, monkeypatch, capsys) -> None:
     monkeypatch.chdir(tmp_path)
     init_cmd()
-
+    py = sys.executable
     conn = get_connection()
-    add_job(conn, "testjob", "echo ok")
-
-    first = datetime(2026, 3, 13, 12, 0, 0, tzinfo=timezone.utc)
-    second = datetime(2026, 3, 13, 12, 5, 0, tzinfo=timezone.utc)
-
-    add_run(conn, RunRecord("testjob", first, first, 0, "out", ""))
-    add_run(conn, RunRecord("testjob", second, second, 1, "", "err"))
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "p", now)
+    add_step(conn, "p", "a", 0, command=f'{py} -c "print(1)"')
+    run_pipeline(conn, "p")
+    run_pipeline(conn, "p")
     conn.close()
 
-    history("testjob")
+    history("p")
 
     out, err = capsys.readouterr()
-
     assert err == ""
-    assert "2026-03-13 12:00:00  exit 0" in out
-    assert "2026-03-13 12:05:00  exit 1" in out
+    assert out.count("completed") == 2
+    assert "run" in out
 
 
 def test_history_no_runs(tmp_path, monkeypatch, capsys) -> None:
     monkeypatch.chdir(tmp_path)
     init_cmd()
-
     conn = get_connection()
-    add_job(conn, "empty", "echo x")
+    add_pipeline(conn, "empty", datetime.now(timezone.utc))
     conn.close()
 
     history("empty")
 
     out, err = capsys.readouterr()
-
     assert err == ""
     assert "No runs." in out
 
 
-def test_history_job_not_found(tmp_path, monkeypatch, capsys) -> None:
+def test_history_pipeline_not_found(tmp_path, monkeypatch, capsys) -> None:
     monkeypatch.chdir(tmp_path)
     init_cmd()
 
@@ -57,7 +53,6 @@ def test_history_job_not_found(tmp_path, monkeypatch, capsys) -> None:
         history("nonexistent")
 
     out, err = capsys.readouterr()
-
     assert exc_info.value.exit_code == 1
     assert "not found" in err.lower()
 
@@ -65,21 +60,21 @@ def test_history_job_not_found(tmp_path, monkeypatch, capsys) -> None:
 def test_history_all_runs(tmp_path, monkeypatch, capsys) -> None:
     monkeypatch.chdir(tmp_path)
     init_cmd()
-
+    py = sys.executable
     conn = get_connection()
-    add_job(conn, "job1", "echo 1")
-    add_job(conn, "job2", "echo 2")
-    now = datetime(2026, 3, 13, 12, 0, 0, tzinfo=timezone.utc)
-    add_run(conn, RunRecord("job1", now, now, 0, "", ""))
-    add_run(conn, RunRecord("job2", now, now, 1, "", ""))
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "p1", now)
+    add_pipeline(conn, "p2", now)
+    add_step(conn, "p1", "a", 0, command=f'{py} -c "print(1)"')
+    add_step(conn, "p2", "b", 0, command=f'{py} -c "print(2)"')
+    run_pipeline(conn, "p1")
+    run_pipeline(conn, "p2")
     conn.close()
 
     history(None)
 
     out, err = capsys.readouterr()
-
     assert err == ""
-    assert "job1" in out
-    assert "job2" in out
-    assert "exit 0" in out
-    assert "exit 1" in out
+    assert "p1" in out
+    assert "p2" in out
+    assert "completed" in out

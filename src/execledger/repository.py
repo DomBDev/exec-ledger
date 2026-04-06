@@ -424,3 +424,24 @@ def get_run_history(conn: sqlite3.Connection, pipeline_name: str) -> list[Pipeli
         )
         for row in cur.fetchall()
     ]
+
+
+def get_all_pipeline_run_history(conn: sqlite3.Connection) -> list[PipelineRun]:
+    """Return all pipeline runs across names, newest first."""
+    cur = conn.execute(
+        """
+        SELECT id, pipeline_name, started_at, finished_at, status
+        FROM pipeline_runs
+        ORDER BY id DESC
+        """
+    )
+    return [
+        PipelineRun(
+            id=row[0],
+            pipeline_name=row[1],
+            started_at=datetime.fromisoformat(row[2]) if row[2] else None,
+            finished_at=datetime.fromisoformat(row[3]) if row[3] else None,
+            status=row[4],
+        )
+        for row in cur.fetchall()
+    ]

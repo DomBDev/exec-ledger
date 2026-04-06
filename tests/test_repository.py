@@ -22,6 +22,7 @@ from execledger.repository import (
     fail_step_run,
     finish_pipeline_run,
     get_all_history,
+    get_all_pipeline_run_history,
     get_history,
     get_job,
     get_pipeline,
@@ -427,6 +428,25 @@ def test_get_run_history() -> None:
     assert history[0].status == "failed"
     assert history[1].id == id1
     assert history[1].status == "completed"
+    conn.close()
+
+
+def test_get_all_pipeline_run_history() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "a", now)
+    add_pipeline(conn, "b", now)
+    id_a = start_pipeline_run(conn, "a", now)
+    finish_pipeline_run(conn, id_a, now, "completed")
+    id_b = start_pipeline_run(conn, "b", now)
+    finish_pipeline_run(conn, id_b, now, "failed")
+    all_runs = get_all_pipeline_run_history(conn)
+    assert len(all_runs) == 2
+    assert all_runs[0].pipeline_name == "b"
+    assert all_runs[0].status == "failed"
+    assert all_runs[1].pipeline_name == "a"
+    assert all_runs[1].status == "completed"
     conn.close()
 
 
