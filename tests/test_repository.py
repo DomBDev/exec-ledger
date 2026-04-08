@@ -5,188 +5,28 @@ import pytest
 
 from execledger.db import init_db
 from execledger.errors import (
-    JobAlreadyExistsError,
-    JobNotFoundError,
     PipelineAlreadyExistsError,
     PipelineNotFoundError,
+    StepAlreadyExistsError,
     StepNotFoundError,
 )
-from execledger.models import Job, RunRecord
 from execledger.repository import (
-    add_job,
     add_pipeline,
-    add_run,
     add_step,
     complete_step_run,
     fail_step_run,
     finish_pipeline_run,
-    get_all_history,
-    get_history,
-    get_job,
+    get_all_pipeline_run_history,
     get_pipeline,
     get_pipeline_run_status,
     get_run_history,
-    list_jobs,
     list_pipelines,
     list_steps,
-    remove_job,
     remove_pipeline,
     remove_step,
     start_pipeline_run,
     start_step_run,
 )
-
-
-def test_add_job() -> None:
-    conn = sqlite3.connect(":memory:")
-    init_db(conn)
-    add_job(conn, "backup", "echo done")
-    row = conn.execute(
-        "SELECT name, command FROM jobs WHERE name = ?",
-        ("backup",),
-    ).fetchone()
-    assert row == ("backup", "echo done")
-    conn.close()
-
-
-def test_list_jobs() -> None:
-    conn = sqlite3.connect(":memory:")
-    init_db(conn)
-    add_job(conn, "backup", "echo done")
-    add_job(conn, "deploy", "echo deploy")
-    jobs = list_jobs(conn)
-    assert jobs == [
-        Job(name="backup", command="echo done"),
-        Job(name="deploy", command="echo deploy"),
-    ]
-    conn.close()
-
-
-def test_list_jobs_empty() -> None:
-    conn = sqlite3.connect(":memory:")
-    init_db(conn)
-    assert list_jobs(conn) == []
-    conn.close()
-
-
-def test_remove_job() -> None:
-    conn = sqlite3.connect(":memory:")
-    init_db(conn)
-    add_job(conn, "backup", "echo done")
-    remove_job(conn, "backup")
-    assert list_jobs(conn) == []
-    conn.close()
-
-
-def test_remove_job_not_found_raises() -> None:
-    conn = sqlite3.connect(":memory:")
-    init_db(conn)
-    with pytest.raises(JobNotFoundError):
-        remove_job(conn, "nonexistent")
-    conn.close()
-
-
-def test_get_job() -> None:
-    conn = sqlite3.connect(":memory:")
-    init_db(conn)
-    add_job(conn, "backup", "echo done")
-    job = get_job(conn, "backup")
-    assert job == Job(name="backup", command="echo done")
-    conn.close()
-
-
-def test_get_job_not_found_raises() -> None:
-    conn = sqlite3.connect(":memory:")
-    init_db(conn)
-    with pytest.raises(JobNotFoundError):
-        get_job(conn, "nonexistent")
-    conn.close()
-
-
-def test_add_run() -> None:
-    conn = sqlite3.connect(":memory:")
-    init_db(conn)
-    add_job(conn, "backup", "echo done")
-    now = datetime.now(timezone.utc)
-    record = RunRecord(
-        job_name="backup",
-        started_at=now,
-        finished_at=now,
-        exit_code=0,
-        stdout="done",
-        stderr="",
-    )
-    add_run(conn, record)
-    row = conn.execute(
-        "SELECT job_name, started_at, finished_at, exit_code, stdout, stderr FROM runs WHERE job_name = ?",
-        ("backup",),
-    ).fetchone()
-    assert row == (
-        "backup",
-        now.isoformat(),
-        now.isoformat(),
-        0,
-        "done",
-        "",
-    )
-    conn.close()
-
-
-def test_get_history() -> None:
-    conn = sqlite3.connect(":memory:")
-    init_db(conn)
-    add_job(conn, "backup", "echo done")
-    t1 = datetime.now(timezone.utc)
-    t2 = datetime.now(timezone.utc)
-    add_run(conn, RunRecord("backup", t1, t1, 0, "first", ""))
-    add_run(conn, RunRecord("backup", t2, t2, 1, "second", "err"))
-    history = get_history(conn, "backup")
-    assert len(history) == 2
-    assert history[0].exit_code == 1
-    assert history[0].stdout == "second"
-    assert history[1].exit_code == 0
-    assert history[1].stdout == "first"
-    conn.close()
-
-
-def test_add_run_job_not_found_raises() -> None:
-    conn = sqlite3.connect(":memory:")
-    init_db(conn)
-    now = datetime.now(timezone.utc)
-    record = RunRecord("nonexistent", now, now, 0, "", "")
-    with pytest.raises(JobNotFoundError):
-        add_run(conn, record)
-    conn.close()
-
-
-def test_get_history_empty() -> None:
-    conn = sqlite3.connect(":memory:")
-    init_db(conn)
-    assert get_history(conn, "nonexistent") == []
-    conn.close()
-
-
-def test_get_all_history() -> None:
-    conn = sqlite3.connect(":memory:")
-    init_db(conn)
-    add_job(conn, "a", "echo a")
-    add_job(conn, "b", "echo b")
-    now = datetime.now(timezone.utc)
-    add_run(conn, RunRecord("a", now, now, 0, "", ""))
-    add_run(conn, RunRecord("b", now, now, 1, "", ""))
-    runs = get_all_history(conn)
-    assert len(runs) == 2
-    assert {r.job_name for r in runs} == {"a", "b"}
-    conn.close()
-
-
-def test_add_job_duplicate_raises() -> None:
-    conn = sqlite3.connect(":memory:")
-    init_db(conn)
-    add_job(conn, "backup", "echo done")
-    with pytest.raises(JobAlreadyExistsError):
-        add_job(conn, "backup", "echo other")
-    conn.close()
 
 
 def test_add_pipeline() -> None:
@@ -286,6 +126,17 @@ def test_add_step_pipeline_not_found_raises() -> None:
     init_db(conn)
     with pytest.raises(PipelineNotFoundError):
         add_step(conn, "nonexistent", "build", 0, command="make build")
+    conn.close()
+
+
+def test_add_step_duplicate_raises() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "deploy", now)
+    add_step(conn, "deploy", "build", 0, command="make build")
+    with pytest.raises(StepAlreadyExistsError):
+        add_step(conn, "deploy", "build", 0, command="make test")
     conn.close()
 
 
@@ -415,6 +266,25 @@ def test_get_run_history() -> None:
     assert history[0].status == "failed"
     assert history[1].id == id1
     assert history[1].status == "completed"
+    conn.close()
+
+
+def test_get_all_pipeline_run_history() -> None:
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    now = datetime.now(timezone.utc)
+    add_pipeline(conn, "a", now)
+    add_pipeline(conn, "b", now)
+    id_a = start_pipeline_run(conn, "a", now)
+    finish_pipeline_run(conn, id_a, now, "completed")
+    id_b = start_pipeline_run(conn, "b", now)
+    finish_pipeline_run(conn, id_b, now, "failed")
+    all_runs = get_all_pipeline_run_history(conn)
+    assert len(all_runs) == 2
+    assert all_runs[0].pipeline_name == "b"
+    assert all_runs[0].status == "failed"
+    assert all_runs[1].pipeline_name == "a"
+    assert all_runs[1].status == "completed"
     conn.close()
 
 

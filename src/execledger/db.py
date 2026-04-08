@@ -12,19 +12,6 @@ def init_db(conn: sqlite3.Connection) -> None:
     """Create all tables if they do not exist."""
     conn.execute("PRAGMA foreign_keys = ON")
     conn.executescript("""
-        CREATE TABLE IF NOT EXISTS jobs (
-            name TEXT PRIMARY KEY,
-            command TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS runs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            job_name TEXT NOT NULL,
-            started_at TEXT NOT NULL,
-            finished_at TEXT NOT NULL,
-            exit_code INTEGER NOT NULL,
-            stdout TEXT NOT NULL,
-            stderr TEXT NOT NULL
-        );
         CREATE TABLE IF NOT EXISTS pipelines (
             name TEXT PRIMARY KEY,
             created_at TEXT NOT NULL
@@ -62,7 +49,13 @@ def init_db(conn: sqlite3.Connection) -> None:
 
 
 def get_connection() -> sqlite3.Connection:
-    """Open connection, ensure schema exists. Caller must close."""
+    """Open connection, ensure schema exists. Caller must close.
+
+    init_db runs on every open: cheap (IF NOT EXISTS), so new installs and old
+    DB files both get any new tables without a separate migration step. Tradeoff:
+    no versioned migrations here. schema changes that alter existing columns still
+    need a deliberate upgrade path outside this helper.
+    """
     db_path = get_db_path()
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path))

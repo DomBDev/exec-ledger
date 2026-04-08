@@ -44,10 +44,6 @@ def run_command(command: str | list[str]) -> tuple[int, str, str]:
     return result.returncode, result.stdout, result.stderr
 
 
-# alias for old code that still calls run_job
-run_job = run_command
-
-
 def run_function(func_ref: str) -> tuple[int, str, str]:
     """Import and call a Python function. Returns (exit_code, stdout, stderr).
 

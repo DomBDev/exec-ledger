@@ -1,4 +1,3 @@
-import sqlite3
 from collections.abc import Callable
 from datetime import datetime, timezone
 
@@ -6,7 +5,6 @@ from execledger.db import get_connection
 from execledger.engine import resume_pipeline, restart_pipeline, run_pipeline
 from execledger.errors import (
     PipelineNotFoundError,
-    StepAlreadyExistsError,
     StepConfigurationError,
 )
 from execledger.models import PipelineRun, StepRun
@@ -69,14 +67,7 @@ class Pipeline:
         try:
             steps = list_steps(conn, self.name)
             pos = len(steps)
-            try:
-                repo_add_step(
-                    conn, self.name, name, pos, command=cmd, func_ref=func_ref
-                )
-            except sqlite3.IntegrityError:
-                raise StepAlreadyExistsError(
-                    f"step '{name}' already exists in pipeline '{self.name}'"
-                ) from None
+            repo_add_step(conn, self.name, name, pos, command=cmd, func_ref=func_ref)
         finally:
             conn.close()
 

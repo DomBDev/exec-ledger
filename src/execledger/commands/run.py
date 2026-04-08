@@ -1,56 +1,57 @@
-from datetime import datetime, timezone
-
 import typer
 
 from execledger.db import get_connection
-from execledger.errors import ExecutionError, JobNotFoundError
-from execledger.models import RunRecord
-from execledger.repository import add_run, get_job
-from execledger.runner import run_job
+from execledger.engine import resume_pipeline, run_pipeline
+from execledger.errors import (
+    NoResumableRunError,
+    PipelineNotFoundError,
+    StepConfigurationError,
+)
+from execledger.repository import get_pipeline_run_status
 
 
 def run(name: str) -> None:
-    """Run a job by name."""
+    """Run all steps of a pipeline once."""
     conn = get_connection()
     try:
-        job = get_job(conn, name)
-    except JobNotFoundError as e:
+        run_id = run_pipeline(conn, name)
+        run_row, _ = get_pipeline_run_status(conn, run_id)
+    except PipelineNotFoundError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1) from e
+    except StepConfigurationError as e:
         typer.echo(str(e), err=True)
         raise typer.Exit(1) from e
     finally:
         conn.close()
 
-    started_at = datetime.now(timezone.utc)
-    try:
-        exit_code, stdout, stderr = run_job(job.command)
-    except ExecutionError as e:
-        typer.echo(str(e), err=True)
-        raise typer.Exit(1) from e
+    if run_row.status == "completed":
+        typer.echo(f"Run {run_id} completed.")
+        raise typer.Exit(0)
+    typer.echo(f"Run {run_id} failed.", err=True)
+    raise typer.Exit(1)
 
-    finished_at = datetime.now(timezone.utc)
-    record = RunRecord(
-        job_name=job.name,
-        started_at=started_at,
-        finished_at=finished_at,
-        exit_code=exit_code,
-        stdout=stdout,
-        stderr=stderr,
-    )
 
+def resume(name: str) -> None:
+    """Resume the latest failed or interrupted run for this pipeline."""
     conn = get_connection()
     try:
-        add_run(conn, record)
-    except JobNotFoundError as e:
+        run_id = resume_pipeline(conn, name)
+        run_row, _ = get_pipeline_run_status(conn, run_id)
+    except PipelineNotFoundError as e:
         typer.echo(str(e), err=True)
         raise typer.Exit(1) from e
-    except Exception as e:
-        typer.echo(f"Failed to save run record: {e}", err=True)
+    except NoResumableRunError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1) from e
+    except StepConfigurationError as e:
+        typer.echo(str(e), err=True)
         raise typer.Exit(1) from e
     finally:
         conn.close()
 
-    if stdout:
-        typer.echo(stdout, nl=False)
-    if stderr:
-        typer.echo(stderr, err=True, nl=False)
-    raise typer.Exit(exit_code)
+    if run_row.status == "completed":
+        typer.echo(f"Run {run_id} resumed and completed.")
+        raise typer.Exit(0)
+    typer.echo(f"Run {run_id} failed.", err=True)
+    raise typer.Exit(1)

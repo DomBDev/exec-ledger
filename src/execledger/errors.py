@@ -1,17 +1,5 @@
-class JobNotFoundError(Exception):
-    """Job name does not exist."""
-
-
-class JobAlreadyExistsError(Exception):
-    """Duplicate job name on add."""
-
-
 class ExecutionError(Exception):
     """Run failed (subprocess or command parse error)."""
-
-
-class SchedulerError(Exception):
-    """Schedule related failures."""
 
 
 class PipelineNotFoundError(Exception):

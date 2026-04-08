@@ -3,32 +3,6 @@ import sqlite3
 from execledger.db import init_db
 
 
-def test_jobs_schema() -> None:
-    conn = sqlite3.connect(":memory:")
-    init_db(conn)
-    cur = conn.execute("PRAGMA table_info(jobs)")
-    cols = {row[1] for row in cur.fetchall()}
-    assert cols == {"name", "command"}
-    conn.close()
-
-
-def test_runs_schema() -> None:
-    conn = sqlite3.connect(":memory:")
-    init_db(conn)
-    cur = conn.execute("PRAGMA table_info(runs)")
-    cols = {row[1] for row in cur.fetchall()}
-    assert cols == {
-        "id",
-        "job_name",
-        "started_at",
-        "finished_at",
-        "exit_code",
-        "stdout",
-        "stderr",
-    }
-    conn.close()
-
-
 def test_pipelines_schema() -> None:
     conn = sqlite3.connect(":memory:")
     init_db(conn)

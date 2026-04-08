@@ -7,11 +7,14 @@ packages = ["src/execledger"]
 
 [project]
 name = "exec-ledger"
-version = "0.0.3a0"
-description = "Local job runner for small automation tasks."
+version = "0.0.3"
+description = "Local pipeline runner for small automation tasks."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = ["typer"]
+
+[project.urls]
+Repository = "https://github.com/DomBDev/exec-ledger"
 
 [project.optional-dependencies]
 dev = ["pytest", "ruff"]
