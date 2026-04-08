@@ -83,7 +83,7 @@ uv run ruff check src tests
 
 ## Roadmap
 
-**v0.0.3** (current focus, alpha development): pipeline + steps, status, resume/restart, SQLite history, legacy “job” model removed for new databases.
+**v0.0.3** (current focus): pipeline + steps, status, resume/restart, SQLite history, legacy “job” model removed for new databases.
 
 **v0.1.0 onward:** passing data between steps, run parameters, richer step contracts (not in the current release).
 
