@@ -10,7 +10,12 @@ from execledger.errors import (
 from execledger.repository import get_pipeline_run_status
 
 
-def run(name: str) -> None:
+def run(
+    name: str = typer.Argument(
+        ...,
+        help="Pipeline name. Printed run ids are global (pipeline_runs.id).",
+    ),
+) -> None:
     """Run all steps of a pipeline once."""
     conn = get_connection()
     try:
@@ -26,13 +31,18 @@ def run(name: str) -> None:
         conn.close()
 
     if run_row.status == "completed":
-        typer.echo(f"Run {run_id} completed.")
+        typer.echo(f"Global run id {run_id} completed.")
         raise typer.Exit(0)
-    typer.echo(f"Run {run_id} failed.", err=True)
+    typer.echo(f"Global run id {run_id} failed.", err=True)
     raise typer.Exit(1)
 
 
-def resume(name: str) -> None:
+def resume(
+    name: str = typer.Argument(
+        ...,
+        help="Pipeline name. Printed run ids are global (pipeline_runs.id).",
+    ),
+) -> None:
     """Resume the latest failed or interrupted run for this pipeline."""
     conn = get_connection()
     try:
@@ -51,7 +61,7 @@ def resume(name: str) -> None:
         conn.close()
 
     if run_row.status == "completed":
-        typer.echo(f"Run {run_id} resumed and completed.")
+        typer.echo(f"Global run id {run_id} resumed and completed.")
         raise typer.Exit(0)
-    typer.echo(f"Run {run_id} failed.", err=True)
+    typer.echo(f"Global run id {run_id} failed.", err=True)
     raise typer.Exit(1)

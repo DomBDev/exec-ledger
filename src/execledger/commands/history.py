@@ -14,16 +14,20 @@ def _fmt_run_line(run: PipelineRun, *, show_pipeline: bool) -> str:
     started = run.started_at.strftime("%Y-%m-%d %H:%M:%S") if run.started_at else "-"
     rid = run.id if run.id is not None else "-"
     if show_pipeline:
-        return f"{started}  {run.pipeline_name}  {run.status}  run {rid}"
-    return f"{started}  {run.status}  run {rid}"
+        return f"{started}  {run.pipeline_name}  {run.status}  global run id {rid}"
+    return f"{started}  {run.status}  global run id {rid}"
 
 
 def history(
     name: str | None = typer.Argument(
-        None, help="Pipeline name. Omit to show runs for all pipelines."
+        None,
+        help=(
+            "Pipeline name. Omit to show runs for all pipelines. "
+            "Run ids in each line are global (pipeline_runs.id)."
+        ),
     ),
 ) -> None:
-    """Show pipeline run history."""
+    """Show pipeline run history (global run ids)."""
     conn = get_connection()
     try:
         if name is not None:

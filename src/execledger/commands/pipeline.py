@@ -54,7 +54,12 @@ def pipeline_remove(name: str) -> None:
         conn.close()
 
 
-def pipeline_status(name: str) -> None:
+def pipeline_status(
+    name: str = typer.Argument(
+        ...,
+        help="Pipeline name. Run ids shown are global (pipeline_runs.id).",
+    ),
+) -> None:
     """Show the latest run and step rows for a pipeline."""
     conn = get_connection()
     try:
@@ -69,7 +74,7 @@ def pipeline_status(name: str) -> None:
             typer.echo(f"latest: status={latest.status!r} (missing run id)")
             return
         run, step_runs = get_pipeline_run_status(conn, rid)
-        typer.echo(f"latest run id={run.id} status={run.status!r}")
+        typer.echo(f"latest global run id={run.id} status={run.status!r}")
         for s in step_runs:
             typer.echo(
                 f"  {s.step_name}: {s.status} exit={s.exit_code} "
